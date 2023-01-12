@@ -27,9 +27,7 @@ class TestCli(
             cli.update_attributes_for_main_used_by_adjust()
             cli.main()
         except SystemExit as e:
-            if e.code == 0:
-                pass
-            else:
+            if e.code != 0:
                 raise e
 
     def test_cli_float_or_none(self):

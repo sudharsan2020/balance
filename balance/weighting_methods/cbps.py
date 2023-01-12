@@ -90,9 +90,7 @@ def bal_loss(
     )
 
     Xprimew = np.matmul((X * design_weights[:, None]).T, weights)
-    loss = np.absolute(np.matmul(np.matmul(Xprimew.T, XtXinv), Xprimew))
-
-    return loss
+    return np.absolute(np.matmul(np.matmul(Xprimew.T, XtXinv), Xprimew))
 
 
 def gmm_function(

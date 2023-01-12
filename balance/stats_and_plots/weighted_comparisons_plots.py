@@ -558,11 +558,7 @@ def seaborn_plot_dist(
             seaborn_plot_dist(dfs1, names=["self", "unadjusted", "target"], dist_type = "ecdf")
     """
     if dist_type is None:
-        if len(dfs) == 1:
-            dist_type = "hist"
-        else:
-            dist_type = "qq"
-
+        dist_type = "hist" if len(dfs) == 1 else "qq"
     #  Choose set of variables to plot
     variables = choose_variables(*(d["df"] for d in dfs), variables=variables)
     logger.debug(f"plotting variables {variables}")
@@ -595,13 +591,12 @@ def seaborn_plot_dist(
             else:
                 # pyre-fixme[6]
                 plot_bar(dfs, names, o, axes[io], weighted)
+        elif dist_type == "qq":
+            # pyre-fixme[6]
+            plot_qq(dfs, names, o, axes[io], weighted)
         else:
-            if dist_type == "qq":
-                # pyre-fixme[6]
-                plot_qq(dfs, names, o, axes[io], weighted)
-            else:
-                # pyre-fixme[6]
-                plot_hist_kde(dfs, names, o, axes[io], weighted, dist_type)
+            # pyre-fixme[6]
+            plot_hist_kde(dfs, names, o, axes[io], weighted, dist_type)
 
     if return_axes:
         return axes
@@ -690,7 +685,7 @@ def plotly_plot_qq(
     for variable in variables:
         variable_specific_dict_of_plots = {}
 
-        assert "target" in dict_of_dfs.keys(), "Must pass target"
+        assert "target" in dict_of_dfs, "Must pass target"
 
         # Extract 'col1' because weighted_quantile will return a DataFrame
         # https://www.statsmodels.org/dev/_modules/statsmodels/stats/weightstats.html#DescrStatsW.quantile
@@ -992,7 +987,7 @@ def plotly_plot_dist(
         # the below functions will add the plotly dict outputs
         # to the dictionary 'dict_of_all_plots' (if return_dict_of_figures is True).
         if dict_of_plot is not None and return_dict_of_figures:
-            dict_of_all_plots.update(dict_of_plot)
+            dict_of_all_plots |= dict_of_plot
 
     if return_dict_of_figures:
         return dict_of_all_plots

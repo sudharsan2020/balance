@@ -180,20 +180,17 @@ class Test_weighted_comparisons_plots(
             "weights": pd.Series([0, 0, 0, 0, 0, 0, 0, 0, 0, 5]),
         }
 
-        # Check that we get a list of matplotlib axes
-        out = []
-        for dist_type in ("hist", "kde", "qq", "ecdf"):
-            out.append(
-                type(
-                    weighted_comparisons_plots.seaborn_plot_dist(
-                        (df4,),
-                        names=["test"],
-                        dist_type=dist_type,
-                        return_axes=True,
-                    )[0]
-                )
+        out = [
+            type(
+                weighted_comparisons_plots.seaborn_plot_dist(
+                    (df4,),
+                    names=["test"],
+                    dist_type=dist_type,
+                    return_axes=True,
+                )[0]
             )
-
+            for dist_type in ("hist", "kde", "qq", "ecdf")
+        ]
         # NOTE: There is no AxesSubplot class until one is invoked and created on the fly.
         #     See details here: https://stackoverflow.com/a/11690800/256662
         self.assertTrue(issubclass(out[0], matplotlib.axes.SubplotBase))

@@ -258,14 +258,10 @@ class BalanceDF:
         """
         # NOTE: this assumes that the .__name is the same as the creation method (i.e.: .covars(), .weights(), .outcomes())
         BalanceDF_child_method = self.__name
-        d = {"self": self}
-        d.update(
-            {
-                k: getattr(v, BalanceDF_child_method)()
-                for k, v in self._sample._links.items()
-            }
-        )
-        return d  # pyre-fixme[7]: this returns what's declared `Dict[str, Union[BalanceCovarsDF, BalanceOutcomesDF, BalanceWeightsDF]]` but got `Dict[str, BalanceDF]`
+        return {"self": self} | {
+            k: getattr(v, BalanceDF_child_method)()
+            for k, v in self._sample._links.items()
+        }
 
     def _call_on_linked(
         self: "BalanceDF",
@@ -457,7 +453,7 @@ class BalanceDF:
         weights = (
             self._weights.values if (weighted and self._weights is not None) else None
         )
-        wdf = weighted_stats.descriptive_stats(
+        return weighted_stats.descriptive_stats(
             df,
             weights,
             stat,
@@ -468,7 +464,6 @@ class BalanceDF:
             numeric_only=True,
             add_na=add_na,
         )
-        return wdf
 
     def to_download(self: "BalanceDF", tempdir: Optional[str] = None) -> FileLink:
         """Creates a downloadable link of the DataFrame, with ids, of the BalanceDF object.
@@ -978,7 +973,7 @@ class BalanceDF:
                 )
             )
         else:
-            out = (
+            return (
                 pd.DataFrame(
                     self._asmd_BalanceDF(self, target, aggregate_by_main_covar)
                 )
@@ -986,7 +981,6 @@ class BalanceDF:
                 .assign(index=(self.__name,))
                 .set_index("index")
             )
-            return out
 
     def asmd_improvement(
         self: "BalanceDF",
@@ -1303,11 +1297,10 @@ class BalanceOutcomesDF(BalanceDF):
                     # %  100.0  87.5
         """
         self_target = self._BalanceDF_child_from_linked_samples().get("target")
-        if self_target is None:
-            logger.warning("Sample does not have target set")
-            return None
-        else:
+        if self_target is not None:
             return general_stats.relative_response_rates(self_target.df)
+        logger.warning("Sample does not have target set")
+        return None
 
     # TODO: it's a question if summary should produce a printable output or a DataFrame.
     #       The BalanceDF.summary method only returns a DataFrame. So it's a question
@@ -1407,17 +1400,7 @@ class BalanceOutcomesDF(BalanceDF):
         relative_response_rates = relative_response_rates
         target_clause = target_clause
 
-        out = (
-            f"{n_outcomes} outcomes: {list_outcomes}\n"
-            "Mean outcomes:\n"
-            f"{mean_outcomes}\n\n"
-            "Response rates (relative to number of respondents in sample):\n"
-            f"{relative_response_rates}\n"
-            f"{relative_to_target_clause}\n"
-            f"{target_clause}\n"
-        )
-
-        return out
+        return f"{n_outcomes} outcomes: {list_outcomes}\nMean outcomes:\n{mean_outcomes}\n\nResponse rates (relative to number of respondents in sample):\n{relative_response_rates}\n{relative_to_target_clause}\n{target_clause}\n"
 
     # TODO: once we have hist/kde methods for plotly, consider changing the defaults here to use plotly instead of seaborn.
     def plot(
@@ -1485,8 +1468,7 @@ class BalanceOutcomesDF(BalanceDF):
         default_kwargs = {
             "library": "seaborn",
             "dist_type": "kde",
-        }
-        default_kwargs.update(kwargs)
+        } | kwargs
         return super().plot(on_linked_samples=on_linked_samples, **default_kwargs)
 
 
@@ -1604,8 +1586,7 @@ class BalanceWeightsDF(BalanceDF):
             "library": "seaborn",
             "dist_type": "kde",
             "numeric_n_values_threshold": -1,
-        }
-        default_kwargs.update(kwargs)
+        } | kwargs
         return super().plot(on_linked_samples=on_linked_samples, **default_kwargs)
 
     def design_effect(self: "BalanceWeightsDF") -> np.float64:

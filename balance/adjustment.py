@@ -123,8 +123,8 @@ def trim_weights(
         weights = weights.clip(upper=max_val)
         if verbose:
             if percent_trimmed > 0:
-                logger.debug("Clipping weights to %s (before renormalizing)" % max_val)
-                logger.debug("Clipped %s of the weights" % percent_trimmed)
+                logger.debug(f"Clipping weights to {max_val} (before renormalizing)")
+                logger.debug(f"Clipped {percent_trimmed} of the weights")
             else:
                 logger.debug("No extreme weights were trimmed")
     elif weight_trimming_percentile is not None:
@@ -134,7 +134,7 @@ def trim_weights(
         )
         if verbose:
             logger.debug(
-                "Winsorizing weights to %s percentile" % str(weight_trimming_percentile)
+                f"Winsorizing weights to {str(weight_trimming_percentile)} percentile"
             )
 
     if keep_sum_of_weights:
@@ -158,18 +158,14 @@ def default_transformations(
     """
     dtypes = {}
     for d in dfs:
-        dtypes.update(d.dtypes.to_dict())
+        dtypes |= d.dtypes.to_dict()
 
-    transformations = {}
-    for k, v in dtypes.items():
-        # Notice that in pandas: pd.api.types.is_numeric_dtype(pd.Series([True, False])) == True
-        # Hence, we need to explicitly check that not is_bool_dtype(v)
-        # see: https://github.com/pandas-dev/pandas/issues/38378
-        if (is_numeric_dtype(v)) and (not is_bool_dtype(v)):
-            transformations[k] = balance_util.quantize
-        else:
-            transformations[k] = balance_util.fct_lump
-    return transformations
+    return {
+        k: balance_util.quantize
+        if (is_numeric_dtype(v)) and (not is_bool_dtype(v))
+        else balance_util.fct_lump
+        for k, v in dtypes.items()
+    }
 
 
 def apply_transformations(
@@ -239,7 +235,7 @@ def apply_transformations(
             raise NotImplementedError(f"Unknown transformations {transformations}")
 
     ns = [0] + list(np.cumsum([x.shape[0] for x in dfs]))
-    boundaries = [(ns[i], ns[i + 1]) for i in range(0, len(ns) - 1)]
+    boundaries = [(ns[i], ns[i + 1]) for i in range(len(ns) - 1)]
     indices = [x.index for x in dfs]
 
     all_data = pd.concat(dfs).reset_index(drop=True)
@@ -263,12 +259,12 @@ def apply_transformations(
         len(additions) + len(transformations)
     ) > 0, "No transformations or additions passed"
 
-    if len(additions) > 0:
+    if additions:
         added = all_data.assign(**additions).loc[:, list(additions.keys())]
     else:
         added = None
 
-    if len(transformations) > 0:
+    if transformations:
         # NOTE: .copy(deep=False) is used to avoid a false alarm that sometimes happen.
         # When we take a slice of the DataFrame (all_data[k]), it is passed to a function
         # inside v from transformations (e.g.: fct_lump), it would then sometimes raise:
@@ -283,9 +279,9 @@ def apply_transformations(
 
     out = pd.concat((added, transformed), axis=1)
 
-    dropped_columns = list(set(all_data.columns.values) - set(out.columns.values))
-
-    if len(dropped_columns) > 0:
+    if dropped_columns := list(
+        set(all_data.columns.values) - set(out.columns.values)
+    ):
         if drop:
             logger.warning(f"Dropping the variables: {dropped_columns}")
         else:
@@ -320,7 +316,7 @@ def _find_adjustment_method(
     Returns:
         Callable: The function for adjustment
     """
-    if method in WEIGHTING_METHODS.keys():
+    if method in WEIGHTING_METHODS:
         adjustment_function = WEIGHTING_METHODS[method]
     else:
         raise ValueError(f"Unknown adjustment method: '{method}'")

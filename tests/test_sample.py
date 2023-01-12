@@ -248,13 +248,13 @@ class TestSample_base_and_adjust_methods(
     def test_Sample_model(self):
         np.random.seed(112358)
         d = pd.DataFrame(np.random.rand(1000, 10))
-        d["id"] = range(0, d.shape[0])
-        d = d.rename(columns={i: "abcdefghij"[i] for i in range(0, 10)})
+        d["id"] = range(d.shape[0])
+        d = d.rename(columns={i: "abcdefghij"[i] for i in range(10)})
         s = Sample.from_frame(d)
 
         d = pd.DataFrame(np.random.rand(10000, 10))
-        d["id"] = range(0, d.shape[0])
-        d = d.rename(columns={i: "abcdefghij"[i] for i in range(0, 10)})
+        d["id"] = range(d.shape[0])
+        d = d.rename(columns={i: "abcdefghij"[i] for i in range(10)})
         t = Sample.from_frame(d)
 
         a = s.adjust(t, max_de=None, method="null")
@@ -459,13 +459,13 @@ class TestSample_metrics_methods(
         np.random.seed(112358)
 
         d = pd.DataFrame(np.random.rand(1000, 10))
-        d["id"] = range(0, d.shape[0])
-        d = d.rename(columns={i: "abcdefghij"[i] for i in range(0, 10)})
+        d["id"] = range(d.shape[0])
+        d = d.rename(columns={i: "abcdefghij"[i] for i in range(10)})
         t = Sample.from_frame(d)
 
         d = pd.DataFrame(np.random.rand(1000, 11))
-        d["id"] = range(0, d.shape[0])
-        d = d.rename(columns={i: "abcdefghijk"[i] for i in range(0, 11)})
+        d["id"] = range(d.shape[0])
+        d = d.rename(columns={i: "abcdefghijk"[i] for i in range(11)})
         d["b"] = np.sqrt(d["b"])
 
         a_with_outcome = Sample.from_frame(d, outcome_columns=["k"])
@@ -554,13 +554,13 @@ class TestSample_metrics_methods(
         np.random.seed(112358)
 
         d = pd.DataFrame(np.random.rand(1000, 10))
-        d["id"] = range(0, d.shape[0])
-        d = d.rename(columns={i: "abcdefghij"[i] for i in range(0, 10)})
+        d["id"] = range(d.shape[0])
+        d = d.rename(columns={i: "abcdefghij"[i] for i in range(10)})
         s = Sample.from_frame(d)
 
         d = pd.DataFrame(np.random.rand(1000, 10))
-        d["id"] = range(0, d.shape[0])
-        d = d.rename(columns={i: "abcdefghij"[i] for i in range(0, 10)})
+        d["id"] = range(d.shape[0])
+        d = d.rename(columns={i: "abcdefghij"[i] for i in range(10)})
         t = Sample.from_frame(d)
 
         a = s.adjust(t)
@@ -641,14 +641,14 @@ class TestSample_metrics_methods(
         np.random.seed(112358)
 
         d = pd.DataFrame(np.random.rand(1000, 10))
-        d["id"] = range(0, d.shape[0])
-        d = d.rename(columns={i: "abcdefghij"[i] for i in range(0, 10)})
+        d["id"] = range(d.shape[0])
+        d = d.rename(columns={i: "abcdefghij"[i] for i in range(10)})
         d["b"] = np.sqrt(d["b"])
         s = Sample.from_frame(d)
 
         d = pd.DataFrame(np.random.rand(1000, 10))
-        d["id"] = range(0, d.shape[0])
-        d = d.rename(columns={i: "abcdefghij"[i] for i in range(0, 10)})
+        d["id"] = range(d.shape[0])
+        d = d.rename(columns={i: "abcdefghij"[i] for i in range(10)})
         t = Sample.from_frame(d)
 
         a = s.adjust(t)
@@ -774,8 +774,8 @@ class TestSample_metrics_methods(
         np.random.seed(112358)
 
         d = pd.DataFrame(np.random.rand(1000, 11))
-        d["id"] = range(0, d.shape[0])
-        d = d.rename(columns={i: "abcdefghijk"[i] for i in range(0, 11)})
+        d["id"] = range(d.shape[0])
+        d = d.rename(columns={i: "abcdefghijk"[i] for i in range(11)})
         d["b"] = np.sqrt(d["b"])
         a_with_outcome = Sample.from_frame(d, outcome_columns=["k"])
         a_with_outcome_adjusted = a_with_outcome.adjust(t)

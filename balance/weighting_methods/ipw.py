@@ -95,10 +95,7 @@ def cv_glmnet_performance(
                 "coefs": coefs,
             }
     """
-    if isinstance(s, str):
-        optimal_lambda = fit[s]
-    else:
-        optimal_lambda = s
+    optimal_lambda = fit[s] if isinstance(s, str) else s
     optimal_lambda_index = np.where(fit["lambdau"] == optimal_lambda)[0]
     if len(optimal_lambda_index) != 1:
         raise Exception(
@@ -309,11 +306,10 @@ def choose_regularization(
         .sort_values("asmd_improvement").tail(1)
     )
     logger.info(f"Best regularisation: \n {best}")
-    solution = {
+    return {
         "best": {"s": best.s.values, "trim": best.trim.values[0]},
         "perf": all_perf,
     }
-    return solution
 
 
 # TODO: add memoaization (maybe in the adjust stage?!)
@@ -498,44 +494,43 @@ def ipw(
         f"Note that these are normalized by cvglmnet"
     )
 
-    if model == "glmnet":
-        logger.info("Fitting logistic model")
-        foldid = np.resize(range(10), y.shape[0])
-        np.random.shuffle(
-            foldid
-        )  # shuffels the values of foldid - note that we set the seed in the beginning of the function, so this order is fixed
-        logger.debug(
-            f"foldid frequency table {pd.crosstab(index=foldid, columns='count')}"
-        )
-        logger.debug(f"first 10 elements of foldid: {foldid[0:9]}")
-        with _patch_nan_in_amin_amax():
-            # we use _patch_nan_in_amin_amax here since sometimes
-            # cvglmnet could have one of the cross validated samples that
-            # produce nan. In which case, the lambda search returns nan
-            # instead of a value from the cross-validated options that successfully computed a lambda
-            # The current monkey-patch solves this problem and makes the function fail less.
-
-            with np.errstate(
-                divide="ignore"
-            ):  # ignoring np warning "divide by zero encountered in log"
-                fit = cvglmnet(
-                    x=X_matrix,
-                    y=y,
-                    family="binomial",
-                    ptype="deviance",
-                    alpha=1,
-                    penalty_factor=penalty_factor,
-                    nlambda=250,
-                    lambda_min=np.array([1e-6]),
-                    nfolds=10,
-                    foldid=foldid,
-                    maxit=5000,
-                    *args,
-                    **kwargs,
-                )
-        logger.debug("Done with cvglmnet")
-    else:
+    if model != "glmnet":
         raise NotImplementedError()
+    logger.info("Fitting logistic model")
+    foldid = np.resize(range(10), y.shape[0])
+    np.random.shuffle(
+        foldid
+    )  # shuffels the values of foldid - note that we set the seed in the beginning of the function, so this order is fixed
+    logger.debug(
+        f"foldid frequency table {pd.crosstab(index=foldid, columns='count')}"
+    )
+    logger.debug(f"first 10 elements of foldid: {foldid[:9]}")
+    with _patch_nan_in_amin_amax():
+        # we use _patch_nan_in_amin_amax here since sometimes
+        # cvglmnet could have one of the cross validated samples that
+        # produce nan. In which case, the lambda search returns nan
+        # instead of a value from the cross-validated options that successfully computed a lambda
+        # The current monkey-patch solves this problem and makes the function fail less.
+
+        with np.errstate(
+            divide="ignore"
+        ):  # ignoring np warning "divide by zero encountered in log"
+            fit = cvglmnet(
+                x=X_matrix,
+                y=y,
+                family="binomial",
+                ptype="deviance",
+                alpha=1,
+                penalty_factor=penalty_factor,
+                nlambda=250,
+                lambda_min=np.array([1e-6]),
+                nfolds=10,
+                foldid=foldid,
+                maxit=5000,
+                *args,
+                **kwargs,
+            )
+    logger.debug("Done with cvglmnet")
     logger.debug(f"fit['lambda_1se']: {fit['lambda_1se']}")
 
     X_matrix_sample = X_matrix[
