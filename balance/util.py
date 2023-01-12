@@ -94,22 +94,20 @@ def guess_id_column(dataset: pd.DataFrame, column_name: Optional[str] = None):
     # a list of possible userid column names instead of only "id".
     # This should go as an input into Sample.from_frame as well.
     columns = list(dataset.columns)
-    if column_name is not None:
-        if column_name in columns:
-            return column_name
-        else:
-            raise ValueError(f"Dataframe does not have column '{column_name}'")
-    else:
+    if column_name is None:
         possible_columns = [i for i in ["id"] if i in columns]
         if len(possible_columns) != 1:
             raise ValueError(
                 "Cannot guess id column name for this DataFrame. "
                 "Please provide a value in id_column"
             )
-        else:
-            column_name = possible_columns[0]
-            logger.warning(f"Guessed id column name {column_name} for the data")
-            return column_name
+        column_name = possible_columns[0]
+        logger.warning(f"Guessed id column name {column_name} for the data")
+        return column_name
+    elif column_name in columns:
+        return column_name
+    else:
+        raise ValueError(f"Dataframe does not have column '{column_name}'")
 
 
 def add_na_indicator(
@@ -131,8 +129,7 @@ def add_na_indicator(
     Returns:
         pd.DataFrame: New dataframe with additional columns
     """
-    already_na_cols = [c for c in df.columns if c.startswith("_is_na_")]
-    if len(already_na_cols) > 0:
+    if already_na_cols := [c for c in df.columns if c.startswith("_is_na_")]:
         # TODO: change to ValueError?!
         raise Exception(
             "Can't add NA indicator to DataFrame which contains"
@@ -276,11 +273,9 @@ def dot_expansion(formula, variables: List):
             "a dataframe, insert variables = list(df.columns)"
         )
     if formula.find(".") == -1:
-        rhs = formula
-    else:
-        dot = "(" + "+".join(x for x in variables) + ")"
-        rhs = str(formula).replace(".", dot)
-    return rhs
+        return formula
+    dot = "(" + "+".join(variables) + ")"
+    return str(formula).replace(".", dot)
 
 
 class one_hot_encoding_greater_2:
@@ -369,25 +364,23 @@ class one_hot_encoding_greater_2:
         self.reference = reference
 
     def code_with_intercept(self, levels):
-        if len(levels) == 2:
-            eye = np.eye(len(levels) - 1)
-            contrasts = np.vstack(
-                (
-                    eye[: self.reference, :],
-                    np.zeros((1, len(levels) - 1)),
-                    eye[self.reference :, :],
-                )
-            )
-            suffixes = [
-                f"[{level}]"
-                for level in levels[: self.reference] + levels[self.reference + 1 :]
-            ]
-            contasts_mat = ContrastMatrix(contrasts, suffixes)
-        else:
-            contasts_mat = ContrastMatrix(
+        if len(levels) != 2:
+            return ContrastMatrix(
                 np.eye(len(levels)), [f"[{level}]" for level in levels]
             )
-        return contasts_mat
+        eye = np.eye(len(levels) - 1)
+        contrasts = np.vstack(
+            (
+                eye[: self.reference, :],
+                np.zeros((1, len(levels) - 1)),
+                eye[self.reference :, :],
+            )
+        )
+        suffixes = [
+            f"[{level}]"
+            for level in levels[: self.reference] + levels[self.reference + 1 :]
+        ]
+        return ContrastMatrix(contrasts, suffixes)
 
     def code_without_intercept(self, levels):
         return self.code_with_intercept(levels)
@@ -540,8 +533,7 @@ def build_model_matrix(
     """
     variables = list(df.columns)
 
-    bracket_variables = [v for v in variables if ("[" in v) or ("]" in v)]
-    if len(bracket_variables) > 0:
+    if bracket_variables := [v for v in variables if ("[" in v) or ("]" in v)]:
         # TODO: ValueError?
         raise Exception(
             "Variable names cannot contain characters '[' or ']'"
@@ -549,10 +541,11 @@ def build_model_matrix(
         )
 
     # Check all factor variables are in variables:
-    if factor_variables is not None:
-        if not (set(factor_variables) <= set(variables)):
-            # TODO: ValueError?
-            raise Exception("Not all factor variables are contained in df")
+    if factor_variables is not None and not (
+        set(factor_variables) <= set(variables)
+    ):
+        # TODO: ValueError?
+        raise Exception("Not all factor variables are contained in df")
 
     model_desc = process_formula(formula, variables, factor_variables)
     # dmatrix cannot get Int64Dtype as data type. Hence converting all numeric columns to float64.
@@ -597,17 +590,13 @@ def _prepare_input_model_matrix(
     """
     variables = choose_variables(sample, target, variables=variables)
 
-    bracket_variables = [v for v in variables if ("[" in v) or ("]" in v)]
-    if len(bracket_variables) > 0:
+    if bracket_variables := [v for v in variables if ("[" in v) or ("]" in v)]:
         raise Exception(
             "Variable names cannot contain characters '[' or ']'"
             f"because patsy uses them to denote one-hot encoded categoricals: ({bracket_variables})"
         )
 
-    if _isinstance_sample(sample):
-        sample_df = sample._df
-    else:
-        sample_df = sample
+    sample_df = sample._df if _isinstance_sample(sample) else sample
     assert sample_df.shape[0] > 0, "sample must have more than zero rows"
     sample_n = sample_df.shape[0]
     sample_df = sample_df.loc[:, variables]
@@ -844,10 +833,10 @@ def model_matrix(
         )
 
     penalty_factor = np.concatenate(pf, axis=0)
-    if return_var_type == "sparse":
-        X_matrix = hstack(X_matrix, format="csc")
-    elif return_var_type == "matrix":
+    if return_var_type == "matrix":
         X_matrix = pd.concat(X_matrix, axis=1).values
+    elif return_var_type == "sparse":
+        X_matrix = hstack(X_matrix, format="csc")
     else:
         X_matrix = pd.concat(X_matrix, axis=1)
     logger.debug("The number of columns in the model matrix: {X_matrix.shape[1]}")
@@ -861,11 +850,8 @@ def model_matrix(
     if return_type == "one":
         result["model_matrix"] = X_matrix
     elif return_type == "two":
-        sample_matrix = X_matrix[0:sample_n]
-        if target is None:
-            target_matrix = None
-        else:
-            target_matrix = X_matrix[sample_n:]
+        target_matrix = None if target is None else X_matrix[sample_n:]
+        sample_matrix = X_matrix[:sample_n]
         result["sample"] = sample_matrix
         result["target"] = target_matrix
 
@@ -887,11 +873,10 @@ def qcut(s, q, duplicates: str = "drop", **kwargs):
     Returns:
         Series of type object with intervals.
     """
-    if s.shape[0] < q:
-        logger.warning("Not quantizing, too few values")
-        return s
-    else:
+    if s.shape[0] >= q:
         return pd.qcut(s, q, duplicates=duplicates, **kwargs).astype("O")
+    logger.warning("Not quantizing, too few values")
+    return s
 
 
 # TODO: fix it so that the order of the returned columns is the same as the original order in the DataFrame
@@ -927,7 +912,7 @@ def quantize(
                 # 5     (4.0, 6.0]    (15.0, 23.0]     (4.0, 6.0]   (20.667, 23.0]
                 # 6     (4.0, 6.0]             NaN     (4.0, 6.0]              NaN
     """
-    if not (isinstance(df, pd.Series) or isinstance(df, pd.DataFrame)):
+    if not (isinstance(df, (pd.Series, pd.DataFrame))):
         # Necessary because pandas calls the function on the first item on its own
         #  https://stackoverflow.com/questions/21635915/
         df = pd.Series(df)
@@ -997,13 +982,18 @@ def _is_arraylike(o) -> bool:
         bool: returns True if an object is an array-ish type.
     """
     return (
-        isinstance(o, np.ndarray)
-        or isinstance(o, pd.Series)
-        or isinstance(o, pd.arrays.PandasArray)
-        or isinstance(o, pd.arrays.StringArray)
-        or isinstance(o, pd.arrays.IntegerArray)
-        or isinstance(o, pd.arrays.BooleanArray)
-        or "pandas.core.arrays" in str(type(o))  # support any pandas array type.
+        isinstance(
+            o,
+            (
+                np.ndarray,
+                pd.Series,
+                pd.arrays.PandasArray,
+                pd.arrays.StringArray,
+                pd.arrays.IntegerArray,
+                pd.arrays.BooleanArray,
+            ),
+        )
+        or "pandas.core.arrays" in str(type(o))
         or (isinstance(o, collections.abc.Sequence) and not isinstance(o, str))
     )
 
@@ -1150,15 +1140,15 @@ def choose_variables(*dfs, variables: Optional[List] = None):
 
     union_variables = reduce(lambda x, y: set(x).union(set(y)), df_variables)
 
-    if len(set(union_variables).symmetric_difference(intersection_variables)) > 0:
+    if set(union_variables).symmetric_difference(intersection_variables):
         logger.warning(
             f"Ignoring variables not present in all Samples: {union_variables.difference(intersection_variables)}"
         )
 
     if variables is not None:
-        variables_not_in_df = set(variables).difference(intersection_variables)
-
-        if len(variables_not_in_df) > 0:
+        if variables_not_in_df := set(variables).difference(
+            intersection_variables
+        ):
             logger.warning(
                 "These variables are not included in the dataframes: {variables_not_in_df}"
             )
@@ -1172,7 +1162,7 @@ def choose_variables(*dfs, variables: Optional[List] = None):
         variables = intersection_variables
     logger.debug(f"Joint variables in all dataframes: {list(variables)}")
 
-    if (variables is None) or (len(variables) == 0):
+    if variables is None or not variables:
         logger.warning("Sample and target have no variables in common")
         return ()
 
@@ -1203,7 +1193,7 @@ def auto_spread(
         is_unique[c] = all(unique_userids.values)
 
     unique_groupings = [k for k, v in is_unique.items() if v]
-    if len(unique_groupings) < 1:
+    if not unique_groupings:
         logger.warning(f"no unique groupings {is_unique}")
         return data
     elif len(unique_groupings) > 1:
@@ -1307,7 +1297,7 @@ def fct_lump(s: pd.Series, prop: float = 0.05) -> pd.Series:
 
     remainder_category_name = "_lumped_other"
     while remainder_category_name in props.index:
-        remainder_category_name = remainder_category_name * 2
+        remainder_category_name *= 2
 
     if s.dtype.name == "category":
         s = s.astype(  # pyre-ignore[9]: this use is for pd.Series (not defined currently for pd.DataFrame)

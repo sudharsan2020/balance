@@ -238,7 +238,7 @@ def prop_above_and_below(
     # calculate props from below:
     if below is not None:
         prop_below = [(w < i).mean() for i in below]
-        prop_below_index = ["prop(w < " + str(round(i, 3)) + ")" for i in below]
+        prop_below_index = [f"prop(w < {str(round(i, 3))})" for i in below]
         prop_below_series = pd.Series(prop_below, index=prop_below_index)
     else:
         prop_below_series = None
@@ -246,23 +246,21 @@ def prop_above_and_below(
     # calculate props from above:
     if above is not None:
         prop_above = [(w >= i).mean() for i in above]
-        prop_above_index = ["prop(w >= " + str(round(i, 3)) + ")" for i in above]
+        prop_above_index = [f"prop(w >= {str(round(i, 3))})" for i in above]
         prop_above_series = pd.Series(prop_above, index=prop_above_index)
     else:
         prop_above_series = None
 
-    # decide if to return one series or a dict
-    if return_as_series:
-        out = pd.concat(
+    return (
+        pd.concat(
             [  # pyre-ignore[6]: pd.concat supports Series.
                 prop_below_series,
                 prop_above_series,
             ]
         )
-    else:
-        out = {"below": prop_below_series, "above": prop_above_series}
-
-    return out  # pyre-ignore[7]:  TODO: see if we can fix this pyre
+        if return_as_series
+        else {"below": prop_below_series, "above": prop_above_series}
+    )
 
 
 def weighted_median_breakdown_point(w: pd.Series) -> np.float64:

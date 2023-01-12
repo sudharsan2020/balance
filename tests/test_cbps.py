@@ -21,10 +21,10 @@ class Testcbps(
 ):
     def test_cbps_from_adjust_function(self):
         sample = Sample.from_frame(
-            pd.DataFrame({"a": (1, 2, 3, 4, 5, 6, 7, 8, 9, 1), "id": range(0, 10)})
+            pd.DataFrame({"a": (1, 2, 3, 4, 5, 6, 7, 8, 9, 1), "id": range(10)})
         )
         target = Sample.from_frame(
-            pd.DataFrame({"a": (1, 2, 3, 4, 5, 6, 7, 8, 9, 9), "id": range(0, 10)})
+            pd.DataFrame({"a": (1, 2, 3, 4, 5, 6, 7, 8, 9, 9), "id": range(10)})
         )
         sample = sample.set_target(target)
         result_adjust = sample.adjust(method="cbps", transformations=None)
@@ -232,21 +232,22 @@ class Testcbps(
             ],
             axis=1,
         )
-        sample_df = sample_df.rename(columns={i: "abcdefghij"[i] for i in range(0, 10)})
+        sample_df = sample_df.rename(columns={i: "abcdefghij"[i] for i in range(10)})
 
         target_df = pd.concat(
             [
                 pd.DataFrame(
                     np.concatenate(
                         (
-                            np.random.uniform(0, 8, size=int(n_target / 2)),
-                            np.random.uniform(8, 10, size=int(n_target / 2)),
+                            np.random.uniform(0, 8, size=n_target // 2),
+                            np.random.uniform(8, 10, size=n_target // 2),
                         )
                     ),
                     columns=[0],
                 ),
                 pd.DataFrame(
-                    np.random.uniform(0, 1, size=(n_target, 4)), columns=range(1, 5)
+                    np.random.uniform(0, 1, size=(n_target, 4)),
+                    columns=range(1, 5),
                 ),
                 pd.DataFrame(
                     np.random.choice(
@@ -257,7 +258,7 @@ class Testcbps(
             ],
             axis=1,
         )
-        target_df = target_df.rename(columns={i: "abcdefghij"[i] for i in range(0, 10)})
+        target_df = target_df.rename(columns={i: "abcdefghij"[i] for i in range(10)})
 
         sample_weights = pd.Series(np.random.uniform(0, 1, size=n_sample))
         target_weights = pd.Series(np.random.uniform(0, 1, size=n_target))
@@ -357,7 +358,7 @@ class Testcbps(
 
         sample = Sample.from_frame(
             df=pd.DataFrame(
-                {"a": np.random.normal(0, 1, n).reshape((n,)), "id": range(0, n)}
+                {"a": np.random.normal(0, 1, n).reshape((n,)), "id": range(n)}
             ),
             id_column="id",
         )

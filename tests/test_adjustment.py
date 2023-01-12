@@ -244,9 +244,8 @@ class TestAdjustment(
         # Test that functions are computed over all dfs passed, not each individually
         transformations = {"d": lambda x: x / max(x)}
         r = balance_adjustment.apply_transformations((s, t), transformations)
-        e = (
-            pd.DataFrame({"d": [2 / 14, 4 / 14, 6 / 14]}),
-            pd.DataFrame({"d": [8 / 14, 10 / 14, 12 / 14, 14 / 14]}),
+        e = pd.DataFrame({"d": [2 / 14, 4 / 14, 6 / 14]}), pd.DataFrame(
+            {"d": [8 / 14, 10 / 14, 12 / 14, 1]}
         )
         self.assertEqual(r[0], e[0])
         self.assertEqual(r[1], e[1])
@@ -307,8 +306,8 @@ class TestAdjustment(
         self.assertEqual(r[1].astype(str), e[1])
 
         #  Test default transformations
-        s = pd.DataFrame({"d": range(0, 100), "e": ["a"] * 96 + ["b"] * 4})
-        t = pd.DataFrame({"d": range(0, 100), "e": ["a"] * 96 + ["b"] * 4})
+        s = pd.DataFrame({"d": range(100), "e": ["a"] * 96 + ["b"] * 4})
+        t = pd.DataFrame({"d": range(100), "e": ["a"] * 96 + ["b"] * 4})
         r_s, r_t = balance_adjustment.apply_transformations((s, t), "default")
 
         self.assertEqual(r_s["d"].drop_duplicates().values.shape[0], 10)

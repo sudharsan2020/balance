@@ -73,11 +73,11 @@ def _prepare_weighted_stat_args(
     # NOTE: np.matrix is an instance of np.ndarray, so we must turn it to pd.Dataframe before moving forward.
     if isinstance(v, np.matrix):
         v = pd.DataFrame(v)
-    if isinstance(v, np.ndarray) or isinstance(v, list):
+    if isinstance(v, (np.ndarray, list)):
         v = pd.Series(v)
     if isinstance(v, pd.Series):
         v = v.to_frame()
-    if isinstance(w, np.ndarray) or isinstance(w, list):
+    if isinstance(w, (np.ndarray, list)):
         w = pd.Series(w)
     if w is None:
         w = pd.Series(np.ones(len(v)), index=v.index)

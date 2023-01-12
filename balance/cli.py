@@ -38,8 +38,7 @@ class BalanceCLI:
         ) = (None, None, None, None, None, None, None, None, None)
 
     def check_input_columns(self, columns: Union[List[str], pd.Index]) -> None:
-        needed_columns = []
-        needed_columns.append(self.sample_column())
+        needed_columns = [self.sample_column()]
         needed_columns.append(self.id_column())
         needed_columns.append(self.weight_column())
         needed_columns.extend(self.covariate_columns())
@@ -169,7 +168,7 @@ class BalanceCLI:
             outcome_columns=outcome_columns,
             check_id_uniqueness=False,
         )
-        logger.info("%s sample object: %s" % (sample_package_name, str(sample)))
+        logger.info(f"{sample_package_name} sample object: {str(sample)}")
 
         target = sample_cls.from_frame(
             target_df,
@@ -178,7 +177,7 @@ class BalanceCLI:
             outcome_columns=outcome_columns,
             check_id_uniqueness=False,
         )
-        logger.info("%s target object: %s" % (sample_package_name, str(target)))
+        logger.info(f"{sample_package_name} target object: {str(target)}")
 
         try:
             adjusted = sample.set_target(target).adjust(
@@ -191,51 +190,46 @@ class BalanceCLI:
                 weight_trimming_mean_ratio=weight_trimming_mean_ratio,
             )
             logger.info("Succeeded with adjusting sample to target")
-            logger.info("%s adjusted object: %s" % (sample_package_name, str(adjusted)))
+            logger.info(f"{sample_package_name} adjusted object: {str(adjusted)}")
 
             logger.info(
-                "Condition on which rows to keep for diagnostics: %s "
-                % rows_to_keep_for_diagnostics
+                f"Condition on which rows to keep for diagnostics: {rows_to_keep_for_diagnostics} "
             )
             logger.info(
-                "Names of columns to keep for diagnostics: %s "
-                % covariate_columns_for_diagnostics
+                f"Names of columns to keep for diagnostics: {covariate_columns_for_diagnostics} "
             )
 
             diagnostics = adjusted.keep_only_some_rows_columns(
                 rows_to_keep=rows_to_keep_for_diagnostics,
                 columns_to_keep=covariate_columns_for_diagnostics,
             ).diagnostics()
-            logger.info(
-                "%s diagnostics object: %s" % (sample_package_name, str(diagnostics))
-            )
+            logger.info(f"{sample_package_name} diagnostics object: {str(diagnostics)}")
 
             rval = {"adjusted": adjusted.df, "diagnostics": diagnostics}
         except Exception as e:
-            if self.args.succeed_on_weighting_failure:
-                logger.error(
-                    "Adjustment failed. Because '--succeed_on_weighting_failure' was set: returning empty weights."
-                )
-                sample.set_weights(None)
-                module = inspect.getmodule(inspect.trace()[-1][0])
-                module_name = module.__name__ if module is not None else None
-                error_message = f"{module_name}: {e}"
-                logger.exception("The error message is: " + error_message)
-                rval = {
-                    "adjusted": sample.df,
-                    "diagnostics": pd.DataFrame(
-                        {
-                            "metric": (
-                                "adjustment_failure",
-                                "adjustment_failure_reason",
-                            ),
-                            "var": (None, None),
-                            "val": (1, error_message),
-                        }
-                    ),
-                }
-            else:
+            if not self.args.succeed_on_weighting_failure:
                 raise e
+            logger.error(
+                "Adjustment failed. Because '--succeed_on_weighting_failure' was set: returning empty weights."
+            )
+            sample.set_weights(None)
+            module = inspect.getmodule(inspect.trace()[-1][0])
+            module_name = module.__name__ if module is not None else None
+            error_message = f"{module_name}: {e}"
+            logger.exception("The error message is: " + error_message)
+            rval = {
+                "adjusted": sample.df,
+                "diagnostics": pd.DataFrame(
+                    {
+                        "metric": (
+                            "adjustment_failure",
+                            "adjustment_failure_reason",
+                        ),
+                        "var": (None, None),
+                        "val": (1, error_message),
+                    }
+                ),
+            }
         return rval
 
     def adapt_output(self, output_df: pd.DataFrame) -> pd.DataFrame:
@@ -355,8 +349,7 @@ class BalanceCLI:
         )
 
         logger.info(
-            "Running cli.main() using %s version %s"
-            % (sample_package_name, sample_package_version)
+            f"Running cli.main() using {sample_package_name} version {sample_package_version}"
         )
 
         # Logging arguments used by main:
@@ -383,7 +376,7 @@ class BalanceCLI:
             sample_package_version,
         )
         main_config = dict(zip(keys, values))
-        logger.info("Attributes used by main() for running adjust: %s" % main_config)
+        logger.info(f"Attributes used by main() for running adjust: {main_config}")
 
         # Load and check input
         input_df = self.load_and_check_input()
@@ -394,7 +387,7 @@ class BalanceCLI:
             results = []
             diagnostics = []
             for batch_name, batch_df in input_df.groupby(self.batch_columns()):
-                logger.info("Running weighting for batch = %s " % str(batch_name))
+                logger.info(f"Running weighting for batch = {str(batch_name)} ")
                 processed = self.process_batch(
                     batch_df,
                     transformations,
@@ -408,14 +401,14 @@ class BalanceCLI:
                 )
                 results.append(processed["adjusted"])
                 diagnostics.append(processed["diagnostics"])
-                logger.info("Done processing batch %s" % str(batch_name))
+                logger.info(f"Done processing batch {str(batch_name)}")
 
-            if (len(results) == 0) and len(diagnostics) == 0:
-                output_df = pd.DataFrame()
-                diagnostics_df = pd.DataFrame()
-            else:
+            if results or diagnostics:
                 output_df = pd.concat(results)
                 diagnostics_df = pd.concat(diagnostics)
+            else:
+                output_df = pd.DataFrame()
+                diagnostics_df = pd.DataFrame()
         else:
             processed = self.process_batch(
                 input_df,
@@ -457,9 +450,7 @@ def _float_or_none(value: Union[float, int, str, None]) -> Optional[float]:
     Returns:
         Optional[float]: None or float.
     """
-    if (value is None) or (value == "None"):
-        return None
-    return float(value)
+    return None if (value is None) or (value == "None") else float(value)
 
 
 def add_arguments_to_parser(parser: ArgumentParser) -> ArgumentParser:

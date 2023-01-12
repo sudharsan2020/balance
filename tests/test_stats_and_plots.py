@@ -496,8 +496,8 @@ class TestBalance_weighted_comparisons_stats(
         np.random.seed(876324)
 
         d = pd.DataFrame(np.random.rand(1000, 11))
-        d["id"] = range(0, d.shape[0])
-        d = d.rename(columns={i: "abcdefghijk"[i] for i in range(0, 11)})
+        d["id"] = range(d.shape[0])
+        d = d.rename(columns={i: "abcdefghijk"[i] for i in range(11)})
 
         self.assertEqual(
             outcome_variance_ratio(d[["j", "k"]], d[["j", "k"]]),

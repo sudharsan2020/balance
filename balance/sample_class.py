@@ -65,7 +65,6 @@ class Sample:
             raise NotImplementedError(
                 "cannot construct Sample class directly... yet (only by invoking Sample.from_frame(...)"
             )
-        pass
 
     def __repr__(self: "Sample") -> str:
         return (
@@ -171,7 +170,7 @@ class Sample:
         id_column = balance_util.guess_id_column(df, id_column)
         if any(sample._df[id_column].isnull()):
             raise ValueError("Null values are not allowed in the id_column")
-        if not set(map(type, sample._df[id_column].tolist())) == {  # pyre-fixme[6] ???
+        if set(map(type, sample._df[id_column].tolist())) != {  # pyre-fixme[6] ???
             str
         }:
             logger.warning("Casting id column to string")
@@ -229,7 +228,7 @@ class Sample:
         # weight column
         if weight_column is None:
             if "weight" in sample._df.columns:
-                logger.warning(f"Guessing weight column '{'weight'}'")
+                logger.warning("Guessing weight column 'weight'")
             else:
                 logger.warning("No weights passed, setting all weights to 1")
                 sample._df["weight"] = 1
@@ -279,7 +278,7 @@ class Sample:
 
     def outcomes(
         self: "Sample",
-    ):  # -> "Optional[Type[BalanceOutcomesDF]]" (not imported due to circular dependency)
+    ):    # -> "Optional[Type[BalanceOutcomesDF]]" (not imported due to circular dependency)
         """
         Produce a BalanceOutcomeDF from a Sample object.
         See :class:BalanceOutcomesDF.
@@ -290,13 +289,12 @@ class Sample:
         Returns:
             BalanceOutcomesDF or None
         """
-        if self._outcome_columns is not None:
-            # NOTE: must import here so to avoid circular dependency
-            from balance.balancedf_class import BalanceOutcomesDF
-
-            return BalanceOutcomesDF(self)
-        else:
+        if self._outcome_columns is None:
             return None
+        # NOTE: must import here so to avoid circular dependency
+        from balance.balancedf_class import BalanceOutcomesDF
+
+        return BalanceOutcomesDF(self)
 
     def weights(
         self: "Sample",
@@ -347,10 +345,7 @@ class Sample:
         Returns:
             str or None: name of model used for adjusting Sample
         """
-        if hasattr(self, "_adjustment_model"):
-            return self._adjustment_model
-        else:
-            return None
+        return self._adjustment_model if hasattr(self, "_adjustment_model") else None
 
     def model_matrix(self: "Sample") -> pd.DataFrame:
         """
@@ -360,8 +355,7 @@ class Sample:
         Returns:
             pd.DataFrame: model matrix of sample
         """
-        res = balance_util.model_matrix(self, add_na=True)["sample"]
-        return res  # pyre-ignore[7]: ["sample"] only chooses the DataFrame
+        return balance_util.model_matrix(self, add_na=True)["sample"]
 
     ############################################
     # Adjusting and adapting weights of a sample
@@ -426,12 +420,13 @@ class Sample:
         Returns:
             None, but adapting the Sample weight column to weights
         """
-        if isinstance(weights, pd.Series):
-            if not all(idx in weights.index for idx in self.df.index):
-                logger.warning(
-                    """Note that not all Sample units will be assigned weights,
+        if isinstance(weights, pd.Series) and any(
+            idx not in weights.index for idx in self.df.index
+        ):
+            logger.warning(
+                """Note that not all Sample units will be assigned weights,
                     since weights are missing some of the indices in Sample.df"""
-                )
+            )
         self._df[self.weight_column.name] = weights
         self.weight_column = self._df[self.weight_column.name]
 
@@ -687,30 +682,33 @@ class Sample:
         design_effect = self.design_effect()
 
         # model performance
-        if self.model() is not None:
-            if (
+        if self.model() is None:
+            model_summary = None
+
+        elif (
                 self.model()["method"]  # pyre-ignore[16]
                 # (None is eliminated by if statement)
                 == "ipw"
             ):
-                model_summary = (
-                    "Model proportion deviance explained: {dev_exp:.3f}".format(
-                        dev_exp=self.model()["perf"]["prop_dev_explained"][0]
-                    )
+            model_summary = (
+                "Model proportion deviance explained: {dev_exp:.3f}".format(
+                    dev_exp=self.model()["perf"]["prop_dev_explained"][0]
                 )
-            else:
-                # TODO: add model performance for other types of models
-                model_summary = None
+            )
         else:
+            # TODO: add model performance for other types of models
             model_summary = None
-
-        out = (
+        return (
             (
                 f"Covar ASMD reduction: {asmd_improvement:.1f}%, design effect: {design_effect:.3f}\n"
                 if self.is_adjusted()
                 else ""
             )
-            + (f"Covar ASMD ({n_asmd_covars} variables): " if self.has_target() else "")
+            + (
+                f"Covar ASMD ({n_asmd_covars} variables): "
+                if self.has_target()
+                else ""
+            )
             + (f"{asmd_before:.3f} -> " if self.is_adjusted() else "")
             + (f"{asmd_now:.3f}\n" if self.has_target() else "")
             + (
@@ -719,7 +717,6 @@ class Sample:
                 else ""
             )
         )
-        return out
 
     def diagnostics(self: "Sample") -> pd.DataFrame:
         # TODO: mention the other diagnostics
@@ -824,27 +821,25 @@ class Sample:
         the_weights = self.weights().df.iloc[
             :, 0
         ]  # should be ['weight'], but this is more robust in case a user uses other names
-        weights_diag_var = []
-        weights_diag_value = []
-
         # adding design_effect and variations
         the_weights_de = weights_stats.design_effect(the_weights)
-        weights_diag_var.extend(
-            ["design_effect", "effective_sample_ratio", "effective_sample_size"]
-        )
-        weights_diag_value.extend(
-            [the_weights_de, 1 / the_weights_de, len(the_weights) / the_weights_de]
-        )
-
-        # adding sum of weights, and then normalizing them to n (sample size)
-        weights_diag_var.append("sum")
-        weights_diag_value.append(the_weights.sum())
-
+        weights_diag_value = [
+            the_weights_de,
+            1 / the_weights_de,
+            len(the_weights) / the_weights_de,
+            the_weights.sum(),
+        ]
         the_weights = the_weights / the_weights.mean()  # normalize weights to sum to n.
 
         # adding basic summary statistics from describe:
         tmp_describe = the_weights.describe()
-        weights_diag_var.extend(["describe_" + i for i in tmp_describe.index])
+        weights_diag_var = [
+            "design_effect",
+            "effective_sample_ratio",
+            "effective_sample_size",
+            "sum",
+            *["describe_" + i for i in tmp_describe.index],
+        ]
         weights_diag_value.extend(tmp_describe.to_list())
         # TODO: decide if we want more quantiles of the weights.
 

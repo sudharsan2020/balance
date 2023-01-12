@@ -633,7 +633,7 @@ class TestUtil(
 
     def test_quantize(self):
         d = pd.DataFrame(np.random.rand(1000, 2))
-        d = d.rename(columns={i: "ab"[i] for i in range(0, 2)})
+        d = d.rename(columns={i: "ab"[i] for i in range(2)})
         d["c"] = ["x"] * 1000
 
         r = balance_util.quantize(d, variables=("a"))

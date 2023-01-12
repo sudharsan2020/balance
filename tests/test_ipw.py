@@ -44,15 +44,15 @@ class Testipw(
 
         # error message
         # TODO: is this test working?
-        s = pd.DataFrame({"a": np.random.uniform(0, 1, 1000), "id": range(0, 1000)})
-        t = pd.DataFrame({"a": np.random.uniform(0.5, 1.5, 1000), "id": range(0, 1000)})
+        s = pd.DataFrame({"a": np.random.uniform(0, 1, 1000), "id": range(1000)})
+        t = pd.DataFrame({"a": np.random.uniform(0.5, 1.5, 1000), "id": range(1000)})
         s_w = pd.Series(np.array((1,) * 1000))
         t_w = pd.Series(np.array((1,) * 1000))
         self.assertRaises(
             Exception, "same number of rows", balance_ipw.ipw, s, s_w, t, t_w
         )
 
-        t = pd.DataFrame({"a": np.random.uniform(0.5, 1.5, 999), "id": range(0, 999)})
+        t = pd.DataFrame({"a": np.random.uniform(0.5, 1.5, 999), "id": range(999)})
         # Doesn't raise an error
         balance_ipw.ipw(
             sample_df=s,
@@ -68,7 +68,7 @@ class Testipw(
         n = 100
         sample = Sample.from_frame(
             df=pd.DataFrame(
-                {"a": np.random.normal(0, 1, n).reshape((n,)), "id": range(0, n)}
+                {"a": np.random.normal(0, 1, n).reshape((n,)), "id": range(n)}
             ),
             id_column="id",
         )
@@ -338,7 +338,7 @@ class Testipw(
             ],
             axis=1,
         )
-        sample_df = sample_df.rename(columns={i: "abcdefghij"[i] for i in range(0, 10)})
+        sample_df = sample_df.rename(columns={i: "abcdefghij"[i] for i in range(10)})
 
         target_df = pd.concat(
             [
@@ -355,7 +355,7 @@ class Testipw(
             ],
             axis=1,
         )
-        target_df = target_df.rename(columns={i: "abcdefghij"[i] for i in range(0, 10)})
+        target_df = target_df.rename(columns={i: "abcdefghij"[i] for i in range(10)})
 
         sample_weights = pd.Series(np.random.uniform(0, 1, size=n_sample))
         target_weights = pd.Series(np.random.uniform(0, 1, size=n_target))

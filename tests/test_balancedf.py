@@ -328,7 +328,9 @@ class TestBalanceWeightsDF(balance.testutil.BalanceTestCase):
 
     def test_BalanceWeightsDF_trim(self):
         s = Sample.from_frame(
-            pd.DataFrame({"w": np.random.uniform(0, 1, 10000), "id": range(0, 10000)}),
+            pd.DataFrame(
+                {"w": np.random.uniform(0, 1, 10000), "id": range(10000)}
+            ),
             id_column="id",
             weight_column="w",
         )
@@ -829,8 +831,8 @@ class TestBalanceDF_asmd(balance.testutil.BalanceTestCase):
         np.random.seed(112358)
 
         d = pd.DataFrame(np.random.rand(1000, 3))
-        d["id"] = range(0, d.shape[0])
-        d = d.rename(columns={i: "abc"[i] for i in range(0, 3)})
+        d["id"] = range(d.shape[0])
+        d = d.rename(columns={i: "abc"[i] for i in range(3)})
         # make 'a' a categorical column in d
         # d = d.assign(a=lambda x: pd.cut(x.a,[0,.25,.5,.75,1]))
         d["a"] = pd.cut(d["a"], [0, 0.25, 0.5, 0.75, 1]).astype(str)
@@ -839,8 +841,8 @@ class TestBalanceDF_asmd(balance.testutil.BalanceTestCase):
         s = Sample.from_frame(d)
 
         d = pd.DataFrame(np.random.rand(1000, 3))
-        d["id"] = range(0, d.shape[0])
-        d = d.rename(columns={i: "abc"[i] for i in range(0, 3)})
+        d["id"] = range(d.shape[0])
+        d = d.rename(columns={i: "abc"[i] for i in range(3)})
         # make 'a' a categorical column in d
         # d = d.assign(a=lambda x: pd.cut(x.a,[0,.25,.5,.75,1]))
         d["a"] = pd.cut(d["a"], [0, 0.25, 0.5, 0.75, 1]).astype(str)

@@ -88,14 +88,7 @@ class Testpoststratify(
             weight_column="w",
         )
         result = sample.adjust(target, method="poststratify", transformations=None)
-        expected = pd.Series(
-            (
-                (2 / 1.5 * 0.5),
-                (0.5 / 2 * 2),
-                (1 / 1 * 1),
-                (2 / 1.5 * 1),
-            )
-        )
+        expected = pd.Series((2 / 1.5 * 0.5, 0.5 / 2 * 2, 1 * 1, 2 / 1.5 * 1))
         self.assertEqual(expected, result.weights().df.iloc[:, 0].values)
 
     def test_poststratify_variables_arg(self):
